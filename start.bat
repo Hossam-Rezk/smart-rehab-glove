@@ -8,22 +8,13 @@ setlocal
 cd /d "%~dp0"
 title Smart Rehab Glove - website
 
-where python >nul 2>nul
+call "%~dp0scripts\setup_env.bat"
 if errorlevel 1 (
-  echo [X] Python was not found.
-  echo     Install Python 3.11 or newer from https://www.python.org/downloads/
-  echo     and tick "Add python.exe to PATH" during installation.
   pause
   exit /b 1
 )
 
-echo Checking Python packages...
-python -m pip install --disable-pip-version-check -q -r requirements.txt
-if errorlevel 1 (
-  echo [!] Could not install packages. Trying to start anyway...
-)
-
-python backend\server.py
+"%VENV_PY%" backend\server.py
 if errorlevel 1 (
   echo.
   echo [X] The server stopped with an error ^(see above^).
