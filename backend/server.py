@@ -36,9 +36,18 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WEB_DIR = os.path.join(ROOT, "web")
 PORT = 8000
 
+def quiet_exception_handler(loop, context):
+    """Hide a harmless Windows asyncio error printed when a browser tab
+    drops its connection (WinError 10054). Everything else is shown."""
+    if isinstance(context.get("exception"), (ConnectionResetError, ConnectionAbortedError)):
+        return
+    loop.default_exception_handler(context)
+
+
 @asynccontextmanager
 async def lifespan(_app):
     state.loop = asyncio.get_running_loop()
+    state.loop.set_exception_handler(quiet_exception_handler)
     state.touch_down_event = asyncio.Event()
     state.touch_up_event = asyncio.Event()
     yield
