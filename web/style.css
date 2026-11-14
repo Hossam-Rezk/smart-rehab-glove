@@ -41,8 +41,6 @@ header {
 }
 .brand { font-weight: 700; font-size: 18px; display: flex; align-items: center; gap: 8px; }
 .brand .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); }
-.patient-chip { color: var(--muted); font-size: 14px; }
-.patient-chip b { color: var(--text); }
 .connect-box { margin-left: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 
 .pill {
@@ -194,8 +192,6 @@ th { color: var(--muted); font-weight: 600; }
 }
 
 /* ================= simplified flow ================= */
-.patient-box { display: flex; gap: 6px; align-items: center; }
-.patient-box select { min-width: 180px; }
 .btn.small { padding: 6px 12px; font-size: 14px; }
 main { max-width: 820px; }
 

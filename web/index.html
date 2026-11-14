@@ -10,10 +10,6 @@
 
 <header>
   <div class="brand"><span class="dot"></span> Smart Rehab Glove</div>
-  <div class="patient-box">
-    <select id="patient-select" title="Patient"></select>
-    <button id="new-patient-btn" class="btn secondary small">+ New</button>
-  </div>
   <div class="connect-box">
     <span id="conn-pill" class="pill">Not connected</span>
     <select id="port-select" title="Choose the glove port"></select>
@@ -21,126 +17,75 @@
   </div>
 </header>
 
-<nav id="nav">
-  <button data-page="exercise" class="active">Exercise</button>
-  <button data-page="history">History</button>
-</nav>
-
 <main>
+  <ol class="stepper" id="stepper">
+    <li data-step="calibrate"><span class="num">1</span> Calibrate</li>
+    <li data-step="flex"><span class="num">2</span> Finger Bend</li>
+    <li data-step="thumb"><span class="num">3</span> Thumb Touch</li>
+    <li data-step="summary"><span class="num">&#10003;</span> Summary</li>
+  </ol>
 
-  <!-- ================= EXERCISE ================= -->
-  <section class="page active" id="page-exercise">
-
-    <ol class="stepper" id="stepper">
-      <li data-step="calibrate"><span class="num">1</span> Calibrate</li>
-      <li data-step="flex"><span class="num">2</span> Finger Bend</li>
-      <li data-step="thumb"><span class="num">3</span> Thumb Touch</li>
-      <li data-step="summary"><span class="num">&#10003;</span> Summary</li>
-    </ol>
-
-    <!-- Step 1: calibrate -->
-    <div class="step-panel card" id="step-calibrate">
-      <h1>Calibrate the glove</h1>
-      <p class="lead" id="cal-msg">Press Start, then follow the beeps: <b>1 beep</b> keep the finger flat, <b>2 beeps</b> bend it fully, <b>3 beeps</b> done.</p>
-      <div class="gauge"><div class="fill" id="cal-fill"></div><div class="text" id="cal-text">0 %</div></div>
-      <div class="gauge-legend"><span>flat</span><span>Thumb pad: <b id="cal-touch">not touched</b></span><span>fully bent</span></div>
-      <div class="actions">
-        <button id="cal-btn" class="btn big">Start calibration</button>
-        <button class="btn big secondary next-btn" data-next="flex">Next &rarr;</button>
-      </div>
-      <details class="howto" data-type="general"><summary>Warm-up before you start</summary><div class="howto-body"></div></details>
+  <!-- Step 1: calibrate -->
+  <div class="step-panel card" id="step-calibrate">
+    <h1>Calibrate the glove</h1>
+    <p class="lead" id="cal-msg">Press Start, then follow the beeps: <b>1 beep</b> keep the finger flat, <b>2 beeps</b> bend it fully, <b>3 beeps</b> done.</p>
+    <div class="gauge"><div class="fill" id="cal-fill"></div><div class="text" id="cal-text">0 %</div></div>
+    <div class="gauge-legend"><span>flat</span><span>Thumb pad: <b id="cal-touch">not touched</b></span><span>fully bent</span></div>
+    <div class="actions">
+      <button id="cal-btn" class="btn big">Start calibration</button>
+      <button class="btn big secondary next-btn" data-next="flex">Next &rarr;</button>
     </div>
+    <details class="howto" data-type="general"><summary>Warm-up before you start</summary><div class="howto-body"></div></details>
+  </div>
 
-    <!-- Step 2: finger bend -->
-    <div class="step-panel card" id="step-flex">
-      <h1>Finger Bend</h1>
-      <p class="lead">Bend the middle finger past the black line, hold, then straighten slowly. Repeat about 10 times.</p>
-      <div class="row target-row">
-        <label for="flex-target">Target: <b id="flex-target-value">60</b> %</label>
-        <input type="range" id="flex-target" min="20" max="95" step="5" value="60">
-        <span id="flex-suggest" class="hint"></span>
-      </div>
-      <div class="gauge big-gauge"><div class="fill" id="flex-fill"></div><div class="target" id="flex-target-line"></div><div class="text" id="flex-text">0 %</div></div>
-      <div id="flex-feedback" class="feedback">Press Start and do your first repetition.</div>
-      <p class="counts"><b id="flex-reps">0</b> reps &middot; <b id="flex-good">0</b> good &middot; best <b id="flex-best">0 %</b></p>
-      <div class="actions">
-        <button id="flex-start" class="btn big">Start</button>
-        <button id="flex-stop" class="btn big danger" disabled>Finish</button>
-        <button class="btn big secondary next-btn" data-next="thumb">Next &rarr;</button>
-      </div>
-      <details class="howto" data-type="flex"><summary>How to do it</summary><div class="howto-body"></div></details>
+  <!-- Step 2: finger bend -->
+  <div class="step-panel card" id="step-flex">
+    <h1>Finger Bend</h1>
+    <p class="lead">Bend the middle finger past the black line, hold, then straighten slowly. Repeat about 10 times.</p>
+    <div class="row target-row">
+      <label for="flex-target">Target: <b id="flex-target-value">60</b> %</label>
+      <input type="range" id="flex-target" min="20" max="95" step="5" value="60">
     </div>
+    <div class="gauge big-gauge"><div class="fill" id="flex-fill"></div><div class="target" id="flex-target-line"></div><div class="text" id="flex-text">0 %</div></div>
+    <div id="flex-feedback" class="feedback">Press Start and do your first repetition.</div>
+    <p class="counts"><b id="flex-reps">0</b> reps &middot; <b id="flex-good">0</b> good &middot; best <b id="flex-best">0 %</b></p>
+    <div class="actions">
+      <button id="flex-start" class="btn big">Start</button>
+      <button id="flex-stop" class="btn big danger" disabled>Finish</button>
+      <button class="btn big secondary next-btn" data-next="thumb">Next &rarr;</button>
+    </div>
+    <details class="howto" data-type="flex"><summary>How to do it</summary><div class="howto-body"></div></details>
+  </div>
 
-    <!-- Step 3: thumb touch -->
-    <div class="step-panel card" id="step-thumb">
-      <h1>Thumb Touch</h1>
-      <p class="lead">Keep the hand open. When the circle turns <b>green</b> and the glove beeps, touch the thumb to a fingertip as fast as you can.</p>
-      <div id="thumb-prompt" class="prompt">Press Start</div>
-      <p class="counts" id="thumb-counts">Trial <b id="thumb-trial">0</b> of <b id="thumb-total">10</b> &middot; average <b id="thumb-avg">-</b> &middot; success <b id="thumb-rate">-</b></p>
-      <div class="actions">
-        <button id="thumb-start" class="btn big">Start</button>
-        <button id="thumb-stop" class="btn big danger" disabled>Stop</button>
-        <button class="btn big secondary next-btn" data-next="summary">Finish &rarr;</button>
-      </div>
-      <details class="howto" data-type="thumb"><summary>How to do it</summary><div class="howto-body"></div></details>
+  <!-- Step 3: thumb touch -->
+  <div class="step-panel card" id="step-thumb">
+    <h1>Thumb Touch</h1>
+    <p class="lead">Keep the hand open. When the circle turns <b>green</b> and the glove beeps, touch the thumb to a fingertip as fast as you can.</p>
+    <div id="thumb-prompt" class="prompt">Press Start</div>
+    <p class="counts">Trial <b id="thumb-trial">0</b> of <b id="thumb-total">10</b> &middot; average <b id="thumb-avg">-</b> &middot; success <b id="thumb-rate">-</b></p>
+    <div class="actions">
+      <button id="thumb-start" class="btn big">Start</button>
+      <button id="thumb-stop" class="btn big danger" disabled>Stop</button>
+      <button class="btn big secondary next-btn" data-next="summary">Finish &rarr;</button>
     </div>
+    <details class="howto" data-type="thumb"><summary>How to do it</summary><div class="howto-body"></div></details>
+  </div>
 
-    <!-- Summary -->
-    <div class="step-panel card" id="step-summary">
-      <h1>Well done!</h1>
-      <p class="lead">Here is today's session.</p>
-      <div class="summary" id="summary-box"></div>
-      <div class="actions">
-        <button class="btn big secondary next-btn" data-next="calibrate">Start again</button>
-        <button class="btn big" id="see-history">See history</button>
-      </div>
+  <!-- Summary -->
+  <div class="step-panel card" id="step-summary">
+    <h1>Well done!</h1>
+    <p class="lead">Here are today's results.</p>
+    <div class="summary" id="summary-box"></div>
+    <div class="actions">
+      <button class="btn big next-btn" data-next="calibrate">Start again</button>
     </div>
-  </section>
-
-  <!-- ================= HISTORY ================= -->
-  <section class="page" id="page-history">
-    <h1>History</h1>
-    <p class="lead" id="progress-summary">Choose a patient at the top to see their progress.</p>
-    <div class="grid two">
-      <div class="card"><h2>Finger bend</h2><div class="chart-box"><canvas id="chart-flex"></canvas></div></div>
-      <div class="card"><h2>Thumb touch</h2><div class="chart-box"><canvas id="chart-thumb"></canvas></div></div>
-    </div>
-    <div class="card">
-      <h2>Sessions</h2>
-      <div class="scroll">
-        <table>
-          <thead><tr><th>Date</th><th>Exercise</th><th>Result</th></tr></thead>
-          <tbody id="session-table"></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
+  </div>
 
   <p class="disclaimer">This tool supports rehabilitation exercises. It does not replace advice from a doctor or physiotherapist. Stop if you feel pain.</p>
 </main>
 
-<!-- New patient dialog -->
-<dialog id="patient-dialog">
-  <form id="patient-form" method="dialog">
-    <h2>New patient</h2>
-    <label for="new-name">Name</label>
-    <input id="new-name" required maxlength="100" placeholder="e.g. Ahmed Ali">
-    <label for="new-hand">Injured hand</label>
-    <select id="new-hand"><option value="right">Right</option><option value="left">Left</option></select>
-    <label for="new-notes">Notes (optional)</label>
-    <input id="new-notes" placeholder="e.g. finger fracture, week 3">
-    <div class="actions">
-      <button type="button" id="patient-cancel" class="btn secondary">Cancel</button>
-      <button type="submit" class="btn">Add</button>
-    </div>
-  </form>
-</dialog>
-
 <div id="toast" class="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="config.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

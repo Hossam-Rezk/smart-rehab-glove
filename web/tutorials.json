@@ -1,0 +1,129 @@
+[
+  {
+    "title": "Warm-up: gentle finger stretches",
+    "exercise_type": "general",
+    "level": "beginner",
+    "duration_min": 3,
+    "description": "Loosen the hand before exercising. Slow, gentle movements only.",
+    "steps": [
+      "Sit with your forearm resting on a table, palm down.",
+      "Spread all fingers apart slowly, hold 3 seconds.",
+      "Bring the fingers back together, hold 3 seconds.",
+      "Gently shake out the hand for 10 seconds.",
+      "Repeat 5 times."
+    ],
+    "tips": "Warm water (not hot) for a few minutes before exercising can make the fingers feel less stiff.",
+    "video_url": "https://www.youtube.com/results?search_query=hand+warm+up+exercises+rehabilitation"
+  },
+  {
+    "title": "Finger flexion: make a soft fist",
+    "exercise_type": "flex",
+    "level": "beginner",
+    "duration_min": 5,
+    "description": "The basic bending exercise measured by the flex sensor on the middle finger.",
+    "steps": [
+      "Start with the hand open and fingers straight.",
+      "Slowly bend all fingers toward the palm, as far as is comfortable.",
+      "Hold the bent position for 2-3 seconds.",
+      "Slowly straighten the fingers again.",
+      "Repeat 10 times. Watch the bend gauge reach the target line."
+    ],
+    "tips": "Move slowly: a smooth, controlled bend scores better than a fast one.",
+    "video_url": "https://www.youtube.com/results?search_query=finger+flexion+exercise+make+a+fist+rehabilitation"
+  },
+  {
+    "title": "Tendon glides",
+    "exercise_type": "flex",
+    "level": "beginner",
+    "duration_min": 6,
+    "description": "A sequence of five hand positions that helps the finger tendons slide smoothly.",
+    "steps": [
+      "Straight hand: fingers straight up, hold 3 s.",
+      "Hook fist: bend only the top two joints, knuckles straight, hold 3 s.",
+      "Full fist: close the hand completely, thumb over the fingers, hold 3 s.",
+      "Tabletop: bend only the big knuckles, fingers straight, hold 3 s.",
+      "Straight fist: fingertips touch the base of the palm, hold 3 s.",
+      "Return to straight hand. Repeat the sequence 5 times."
+    ],
+    "tips": "Do it in front of the website: the flex reading changes for each position.",
+    "video_url": "https://www.youtube.com/results?search_query=tendon+gliding+exercises"
+  },
+  {
+    "title": "Hold-and-release bends",
+    "exercise_type": "flex",
+    "level": "intermediate",
+    "duration_min": 6,
+    "description": "Builds control and endurance by holding the bend at the target.",
+    "steps": [
+      "Bend the finger until the gauge passes the black target line.",
+      "Hold it there for 5 seconds.",
+      "Release slowly over 3 seconds until the finger is straight.",
+      "Rest 5 seconds.",
+      "Repeat 8 times."
+    ],
+    "tips": "If the finger shakes while holding, shorten the hold time and build up gradually.",
+    "video_url": "https://www.youtube.com/results?search_query=finger+flexion+hold+exercise+hand+therapy"
+  },
+  {
+    "title": "Full-range flexion with blocking",
+    "exercise_type": "flex",
+    "level": "advanced",
+    "duration_min": 7,
+    "description": "Isolates the middle finger joints to reach a complete bend.",
+    "steps": [
+      "Hold the middle finger just below the middle joint with your other hand.",
+      "Bend only the top two joints of the middle finger, hold 3 s.",
+      "Straighten slowly.",
+      "Move your support to just below the top joint and bend only the tip, hold 3 s.",
+      "Repeat each 8 times, then do 5 full bends with the glove."
+    ],
+    "tips": "Blocking exercises should never be forced. Ask your therapist before starting if you had tendon surgery.",
+    "video_url": "https://www.youtube.com/results?search_query=finger+blocking+exercises+hand+therapy"
+  },
+  {
+    "title": "Thumb opposition: touch each fingertip",
+    "exercise_type": "thumb",
+    "level": "beginner",
+    "duration_min": 5,
+    "description": "Touch the thumb pad to each fingertip. The thumb touch sensor detects every contact.",
+    "steps": [
+      "Start with the hand open.",
+      "Touch the thumb to the tip of the index finger, forming an \"O\". Hold 2 s.",
+      "Open the hand.",
+      "Repeat with the middle, ring and little fingers.",
+      "Do 3 rounds. In the website, touch when it says \"Touch now!\"."
+    ],
+    "tips": "Try to make a round \"O\" shape rather than a flat pinch.",
+    "video_url": "https://www.youtube.com/results?search_query=thumb+opposition+exercise"
+  },
+  {
+    "title": "Quick-response thumb touches",
+    "exercise_type": "thumb",
+    "level": "intermediate",
+    "duration_min": 5,
+    "description": "Improves speed and coordination between the thumb and fingers.",
+    "steps": [
+      "Rest the hand open on a table.",
+      "When the website shows \"Touch now!\", touch the thumb to the index fingertip as quickly as you can.",
+      "Open the hand fully after each touch.",
+      "Complete 10 trials and check your average reaction time."
+    ],
+    "tips": "Accuracy first, speed second. A full open-and-touch counts more than a small twitch.",
+    "video_url": "https://www.youtube.com/results?search_query=thumb+finger+coordination+exercise"
+  },
+  {
+    "title": "Thumb hold and squeeze",
+    "exercise_type": "thumb",
+    "level": "advanced",
+    "duration_min": 6,
+    "description": "Strengthens the pinch by holding the thumb contact for longer.",
+    "steps": [
+      "Touch the thumb to the middle fingertip.",
+      "Press gently and hold the contact for 5 seconds.",
+      "Release and open the hand.",
+      "Repeat 8 times, then switch to the index finger."
+    ],
+    "tips": "Keep the pressure gentle. You should feel effort, never pain.",
+    "video_url": "https://www.youtube.com/results?search_query=thumb+pinch+strengthening+exercise"
+  }
+]

@@ -9,7 +9,8 @@ after an accident or injury:
    reliably the patient can touch the thumb to a fingertip.
 
 Everything runs on your PC. The glove (Raspberry Pi Pico 2 W) connects with a
-USB cable. Patients, sessions and tutorials are saved in Supabase.
+USB cable. Nothing is stored and no internet or account is needed: results
+are shown on screen at the end of each session.
 
 > This tool supports rehabilitation exercises. It does not replace advice from
 > a doctor or physiotherapist. Stop if you feel pain.
@@ -18,9 +19,9 @@ USB cable. Patients, sessions and tutorials are saved in Supabase.
 
 ## Quick start (Windows)
 
-You need **Python 3.11+** ([python.org](https://www.python.org/downloads/), tick
-*"Add python.exe to PATH"* when installing) and an internet connection (for the
-database).
+You need **Python 3.10+** ([python.org](https://www.python.org/downloads/), tick
+*"Add python.exe to PATH"* when installing). The first run needs internet once
+to download the Python packages; after that everything works offline.
 
 1. **Set up the Pico (once).** Plug the glove in by USB, close Thonny, and
    double-click **`setup_pico.bat`**. It installs everything and copies the
@@ -28,10 +29,9 @@ database).
 2. **Start the website.** Double-click **`start.bat`**. The website opens at
    <http://localhost:8000>. Keep the black window open.
 3. **Connect.** Press **Connect glove** at the top of the website.
-4. Choose a patient at the top (or press **+ New**), then follow the steps:
-   **1 Calibrate → 2 Finger Bend → 3 Thumb Touch → Summary**. Each step has
-   a *How to do it* section with the matching tutorials. The **History** tab
-   shows progress charts and past sessions.
+4. Follow the steps: **1 Calibrate → 2 Finger Bend → 3 Thumb Touch →
+   Summary**. Each step has a *How to do it* section with the matching
+   tutorials. The Summary shows today's results.
 
 No glove at hand? Choose **"Simulator (no glove needed)"** in the port list
 next to *Connect glove* to try the whole website.
@@ -71,18 +71,15 @@ Pico 2 W ──USB serial (JSON, 50 Hz)──► backend/server.py (FastAPI)
   buzzer + LED  ◄── commands ────────────│  • thumb reaction test
                                          ▼ WebSocket
                                  website (web/, http://localhost:8000)
-                                         │
-                                 Supabase: patients, sessions, tutorials
 ```
 
 | Folder | What it contains |
 |---|---|
 | `pico/` | MicroPython code for the glove (`main.py`, `config.py`) |
 | `backend/` | Local server: USB link and simulator (`glove.py`), AI (`ai.py`, `rep_features.py`), API (`server.py`) |
-| `web/` | The website (plain HTML, CSS and JS, light theme) |
+| `web/` | The website (plain HTML, CSS and JS, light theme) and `tutorials.json` |
 | `model/` | Trained AI model weights (`rep_quality_model.joblib`) and its report |
 | `training/` | The script that trained the model |
-| `supabase/` | Database schema and access details |
 
 ### The AI model
 
@@ -97,10 +94,6 @@ size, 4–12 Hz tremor energy and jerk. A **gradient-boosting classifier**
 | `partial` | "Try to bend a little further." |
 | `too_fast` | "Slow down - bend and release gently." |
 | `shaky` | "A bit shaky - move more smoothly." |
-
-The website also adjusts the target bend from session to session:
-- If at least 80% of the last session's reps were good, the target goes up 5%.
-- If fewer than 40% were good, it goes down 5%.
 
 **Training data:** [Processed DataGlove Hand Movement Data](https://www.kaggle.com/datasets/krishnagarigipati/final-datasets)
 (Kaggle, MIT license). The file `dynamic_data.csv` was used: 1.05 M rows from
@@ -135,6 +128,6 @@ python training/train_model.py path\to\dynamic_data.csv
 | "The glove did not answer" | Run `setup_pico.bat`, then unplug and replug the USB cable. |
 | Calibration failed | Check the flex sensor wiring (GP26, 47 kΩ resistor). |
 | Buzzer sounds all the time | Set `BUZZER_ACTIVE_LOW = True` in `pico/config.py`, then run `setup_pico.bat`. |
-| Tutorials / patients don't load | The PC needs internet for the Supabase database. |
+| Website shows "Cannot reach the local server" | Start `start.bat` and keep its window open. |
 
-Database details: [`supabase/DATABASE_ACCESS.md`](supabase/DATABASE_ACCESS.md).
+To change the tutorials, edit [`web/tutorials.json`](web/tutorials.json).

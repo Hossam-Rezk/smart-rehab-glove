@@ -10,7 +10,7 @@ The server:
   * runs the AI repetition-quality model on the live flex data,
   * runs the thumb-touch reaction test,
   * pushes everything live to the website over a WebSocket.
-Patients, sessions and tutorials are stored in Supabase by the website.
+Nothing is stored: results live in the browser page until it is closed.
 """
 import asyncio
 import os
