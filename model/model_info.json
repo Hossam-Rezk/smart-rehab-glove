@@ -1,0 +1,65 @@
+{
+  "model": "HistGradientBoostingClassifier",
+  "sklearn_version": "1.9.0",
+  "dataset": "krishnagarigipati/final-datasets (dynamic_data.csv), MIT license",
+  "features": [
+    "peak",
+    "rom",
+    "duration",
+    "rel_time_to_peak",
+    "hold_time",
+    "max_up_speed",
+    "max_down_speed",
+    "mean_abs_speed",
+    "n_speed_peaks",
+    "dir_changes_ps",
+    "tremor_rms",
+    "tremor_band",
+    "log_jerk"
+  ],
+  "labels": [
+    "good",
+    "partial",
+    "too_fast",
+    "shaky"
+  ],
+  "sample_rate_hz": 50,
+  "people_total": 25,
+  "test_people": [
+    "18",
+    "23",
+    "24",
+    "4",
+    "5"
+  ],
+  "train_reps": 32000,
+  "test_reps": 8000,
+  "test_accuracy_unseen_people": 0.995,
+  "confusion_matrix": [
+    [
+      1969,
+      0,
+      0,
+      31
+    ],
+    [
+      0,
+      1992,
+      0,
+      8
+    ],
+    [
+      0,
+      0,
+      2000,
+      0
+    ],
+    [
+      0,
+      0,
+      1,
+      1999
+    ]
+  ],
+  "trained_at": "2026-11-15 01:04"
+}

@@ -1,0 +1,18 @@
+Test accuracy on unseen people: 99.5%
+
+              precision    recall  f1-score   support
+
+        good      1.000     0.985     0.992      2000
+     partial      1.000     0.996     0.998      2000
+    too_fast      1.000     1.000     1.000      2000
+       shaky      0.981     1.000     0.990      2000
+
+    accuracy                          0.995      8000
+   macro avg      0.995     0.995     0.995      8000
+weighted avg      0.995     0.995     0.995      8000
+
+Confusion matrix (rows = true, cols = predicted): ['good', 'partial', 'too_fast', 'shaky']
+[[1969    0    0   31]
+ [   0 1992    0    8]
+ [   0    0 2000    0]
+ [   0    0    1 1999]]

@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+# The Kaggle dataset is used locally for training only - never commit it.
+*.csv
+data/
