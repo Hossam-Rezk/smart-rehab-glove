@@ -28,8 +28,10 @@ database).
 2. **Start the website.** Double-click **`start.bat`**. The website opens at
    <http://localhost:8000>. Keep the black window open.
 3. **Connect.** Press **Connect glove** at the top of the website.
-4. Choose or add a patient, **Calibrate**, then do **Finger Bend** and
-   **Thumb Touch**.
+4. Choose a patient at the top (or press **+ New**), then follow the steps:
+   **1 Calibrate → 2 Finger Bend → 3 Thumb Touch → Summary**. Each step has
+   a *How to do it* section with the matching tutorials. The **History** tab
+   shows progress charts and past sessions.
 
 No glove at hand? Choose **"Simulator (no glove needed)"** in the port list
 next to *Connect glove* to try the whole website.

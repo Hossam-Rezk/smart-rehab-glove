@@ -7,15 +7,16 @@ const db = window.supabase
   ? window.supabase.createClient(window.APP_CONFIG.SUPABASE_URL, window.APP_CONFIG.SUPABASE_ANON_KEY)
   : null;
 
-const QUALITY_NAMES = { good: "Good", partial: "Bend further", too_fast: "Too fast", shaky: "Shaky" };
+const STEPS = ["calibrate", "flex", "thumb", "summary"];
 
 const app = {
   connected: false,
   patients: [],
   patient: null,
-  exercise: null,
-  flex: { reps: [], startedAt: null, target: 60 },
-  thumb: { trials: [], startedAt: null, total: 10 },
+  step: "calibrate",
+  done: new Set(),
+  flex: { reps: [], startedAt: null, target: 60, saved: [] },
+  thumb: { trials: [], startedAt: null, total: 10, saved: [] },
   charts: {},
 };
 
@@ -52,22 +53,57 @@ function avg(values) {
   return list.length ? list.reduce((a, b) => a + b, 0) / list.length : null;
 }
 
-// ---------------------------------------------------------------- navigation
+// ---------------------------------------------------------------- pages and steps
 function showPage(name) {
   document.querySelectorAll("#nav button").forEach((b) => b.classList.toggle("active", b.dataset.page === name));
   document.querySelectorAll("section.page").forEach((s) => s.classList.toggle("active", s.id === "page-" + name));
-  if (name === "progress") loadProgress();
-  if (name === "flex") suggestTarget();
+  if (name === "history") loadHistory();
 }
 document.querySelectorAll("#nav button").forEach((b) => b.addEventListener("click", () => showPage(b.dataset.page)));
+$("see-history").addEventListener("click", () => showPage("history"));
+
+async function goToStep(step) {
+  if (exerciseRunning()) await stopRunning();
+  if (step === "calibrate" && app.step === "summary") {
+    app.done.clear();
+    app.flex.saved = [];
+    app.thumb.saved = [];
+  }
+  app.step = step;
+  STEPS.forEach((s) => {
+    $("step-" + s).classList.toggle("active", s === step);
+    const li = document.querySelector(`#stepper li[data-step="${s}"]`);
+    li.classList.toggle("active", s === step);
+    li.classList.toggle("done", s !== step && app.done.has(s));
+  });
+  if (step === "flex") suggestTarget();
+  if (step === "summary") renderSummary();
+}
+document.querySelectorAll("#stepper li").forEach((li) => li.addEventListener("click", () => goToStep(li.dataset.step)));
+document.querySelectorAll(".next-btn").forEach((b) => b.addEventListener("click", () => {
+  if (b.dataset.next !== "calibrate") app.done.add(app.step);
+  goToStep(b.dataset.next);
+}));
+
+function exerciseRunning() {
+  return !!(app.flex.startedAt || app.thumb.startedAt);
+}
+
+async function stopRunning() {
+  await api("/api/stop", {}).catch(() => {});
+  if (app.flex.startedAt) await finishFlex();
+  if (app.thumb.startedAt) await finishThumb();
+}
 
 // ---------------------------------------------------------------- connection
 async function loadPorts() {
   try {
     const data = await api("/api/ports");
     const select = $("port-select");
+    const current = select.value;
     select.innerHTML = '<option value="">Auto-detect Pico</option>' +
       data.ports.map((p) => `<option value="${escapeHtml(p.port)}">${escapeHtml(p.label)}</option>`).join("");
+    if ([...select.options].some((o) => o.value === current)) select.value = current;
   } catch {
     toast("Cannot reach the local server. Is start.bat running?", true);
   }
@@ -95,13 +131,10 @@ $("connect-btn").addEventListener("click", async () => {
 });
 
 function updateConnection(status) {
-  if (status) {
-    app.connected = status.connected;
-    app.exercise = status.exercise;
-  }
+  if (status) app.connected = status.connected;
   const pill = $("conn-pill");
   pill.className = "pill" + (app.connected ? " on" : "");
-  pill.textContent = app.connected ? "Glove connected" : "Glove not connected";
+  pill.textContent = app.connected ? "Glove connected" : "Not connected";
   $("connect-btn").textContent = app.connected ? "Disconnect" : "Connect glove";
   $("connect-btn").className = app.connected ? "btn secondary" : "btn";
   $("port-select").style.display = app.connected ? "none" : "";
@@ -144,29 +177,29 @@ function showSample(msg) {
 }
 
 // ---------------------------------------------------------------- patients
-async function loadPatients() {
+async function loadPatients(selectId) {
   if (!db) return toast("Database library failed to load. Check the internet connection.", true);
-  const { data, error } = await db.from("patients").select("*").order("created_at", { ascending: false });
+  const { data, error } = await db.from("patients").select("*").order("name");
   if (error) return toast("Database error: " + error.message, true);
   app.patients = data;
-  const saved = storageGet("patientId");
   const select = $("patient-select");
-  select.innerHTML = '<option value="">- choose -</option>' +
+  select.innerHTML = '<option value="">Choose patient...</option>' +
     data.map((p) => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join("");
-  if (saved && data.some((p) => p.id === saved)) select.value = saved;
+  const wanted = selectId || storageGet("patientId");
+  if (wanted && data.some((p) => p.id === wanted)) select.value = wanted;
   selectPatient(select.value);
 }
 
 function selectPatient(id) {
   app.patient = app.patients.find((p) => p.id === id) || null;
-  $("patient-name").textContent = app.patient ? app.patient.name : "none selected";
-  $("patient-info").textContent = app.patient
-    ? `Injured hand: ${app.patient.injured_hand}. ${app.patient.notes || ""}`
-    : "Select a patient so sessions are saved to their history.";
   if (app.patient) storageSet("patientId", app.patient.id);
+  if ($("page-history").classList.contains("active")) loadHistory();
+  if (app.step === "flex") suggestTarget();
 }
 $("patient-select").addEventListener("change", (e) => selectPatient(e.target.value));
 
+$("new-patient-btn").addEventListener("click", () => $("patient-dialog").showModal());
+$("patient-cancel").addEventListener("click", () => $("patient-dialog").close());
 $("patient-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!db) return;
@@ -174,47 +207,50 @@ $("patient-form").addEventListener("submit", async (event) => {
   if (!row.name) return;
   const { data, error } = await db.from("patients").insert(row).select().single();
   if (error) return toast("Could not add patient: " + error.message, true);
-  storageSet("patientId", data.id);
   $("patient-form").reset();
+  $("patient-dialog").close();
   toast("Patient added.");
-  await loadPatients();
+  await loadPatients(data.id);
 });
 
-// ---------------------------------------------------------------- calibration
-const calSteps = ["flat", "bent", "done"];
-function markCalibration(stage) {
-  const index = calSteps.indexOf(stage);
-  calSteps.forEach((s, i) => {
-    $("cal-step-" + s).className = "step" + (i < index ? " done" : i === index ? (stage === "done" ? " done" : " active") : "");
-  });
+function needPatient() {
+  if (app.patient) return true;
+  toast("Choose or add a patient at the top first.", true);
+  $("patient-select").focus();
+  return false;
 }
 
+// ---------------------------------------------------------------- step 1: calibration
 $("cal-btn").addEventListener("click", async () => {
   try {
     await api("/api/calibrate", {});
     $("cal-btn").disabled = true;
-    $("cal-msg").textContent = "Calibrating... follow the beeps.";
+    $("cal-msg").innerHTML = "<b>1 beep:</b> keep the finger <b>flat</b>...";
   } catch (error) {
     toast(error.message, true);
   }
 });
 
 function onCalibration(msg) {
+  const text = {
+    flat: "<b>1 beep:</b> keep the finger <b>flat</b>...",
+    bent: "<b>2 beeps:</b> now <b>bend it fully</b> and hold...",
+    done: "<b>Done!</b> The glove is calibrated. Press <b>Next</b>.",
+  };
   if (msg.stage === "failed") {
-    calSteps.forEach((s) => ($("cal-step-" + s).className = "step"));
     $("cal-msg").textContent = "Calibration failed: " + (msg.reason || "") + " Try again.";
     $("cal-btn").disabled = false;
     return;
   }
-  markCalibration(msg.stage);
+  $("cal-msg").innerHTML = text[msg.stage] || "";
   if (msg.stage === "done") {
-    $("cal-msg").textContent = "Calibration done! Go to Finger Bend to start exercising.";
     $("cal-btn").disabled = false;
     $("cal-btn").textContent = "Calibrate again";
+    app.done.add("calibrate");
   }
 }
 
-// ---------------------------------------------------------------- finger bend exercise
+// ---------------------------------------------------------------- step 2: finger bend
 $("flex-target").addEventListener("input", (e) => setTarget(+e.target.value));
 function setTarget(value) {
   app.flex.target = value;
@@ -225,25 +261,22 @@ function setTarget(value) {
 
 // Adaptive difficulty: raise or lower the target from the last session.
 async function suggestTarget() {
-  const box = $("flex-suggest");
-  box.style.display = "none";
-  if (!db || !app.patient || app.exercise === "flex") return;
-  const { data } = await db.from("sessions").select("target_percent, good_rep_ratio, reps_count")
+  $("flex-suggest").textContent = "";
+  if (!db || !app.patient || app.flex.startedAt) return;
+  const { data } = await db.from("sessions").select("target_percent, good_rep_ratio")
     .eq("patient_id", app.patient.id).eq("exercise_type", "flex").gt("reps_count", 0)
     .order("started_at", { ascending: false }).limit(1);
   if (!data || !data.length) return;
   const last = data[0];
   let target = last.target_percent || 60;
-  let reason = "Same target as last time.";
-  if (last.good_rep_ratio >= 0.8) { target = Math.min(95, target + 5); reason = "Great last session - target raised."; }
-  else if (last.good_rep_ratio < 0.4) { target = Math.max(20, target - 5); reason = "Target lowered a little to build up."; }
+  if (last.good_rep_ratio >= 0.8) target = Math.min(95, target + 5);
+  else if (last.good_rep_ratio < 0.4) target = Math.max(20, target - 5);
   setTarget(target);
-  box.textContent = `AI suggestion: ${target} %. ${reason}`;
-  box.style.display = "";
+  $("flex-suggest").textContent = "Set by AI from the last session";
 }
 
 $("flex-start").addEventListener("click", async () => {
-  if (!app.patient) toast("No patient selected: this session will not be saved.", true);
+  if (!needPatient()) return;
   try {
     await api("/api/flex/start", { target: app.flex.target });
   } catch (error) {
@@ -251,10 +284,9 @@ $("flex-start").addEventListener("click", async () => {
   }
   app.flex.reps = [];
   app.flex.startedAt = new Date().toISOString();
-  $("flex-table").innerHTML = "";
   updateFlexStats();
   $("flex-feedback").className = "feedback";
-  $("flex-feedback").textContent = "Go! Bend the finger to the target line.";
+  $("flex-feedback").textContent = "Go! Bend the finger to the black line.";
   $("flex-start").disabled = true;
   $("flex-stop").disabled = false;
   $("flex-target").disabled = true;
@@ -262,10 +294,7 @@ $("flex-start").addEventListener("click", async () => {
 
 $("flex-stop").addEventListener("click", async () => {
   await api("/api/stop", {}).catch(() => {});
-  $("flex-start").disabled = false;
-  $("flex-stop").disabled = true;
-  $("flex-target").disabled = false;
-  await saveFlexSession();
+  await finishFlex();
 });
 
 function onRep(rep) {
@@ -274,10 +303,6 @@ function onRep(rep) {
   const fb = $("flex-feedback");
   fb.className = "feedback " + rep.quality;
   fb.textContent = `Rep ${rep.rep_index}: ${rep.message} (${rep.peak_percent} %)`;
-  const row = document.createElement("tr");
-  row.innerHTML = `<td>${rep.rep_index}</td><td>${rep.peak_percent} %</td><td>${(rep.duration_ms / 1000).toFixed(1)} s</td>` +
-    `<td>${Math.round(rep.smoothness * 100)} %</td><td><span class="tag ${rep.quality}">${QUALITY_NAMES[rep.quality]}</span></td>`;
-  $("flex-table").prepend(row);
   updateFlexStats();
 }
 
@@ -288,12 +313,15 @@ function updateFlexStats() {
   $("flex-best").textContent = (reps.length ? Math.max(...reps.map((r) => r.peak_percent)) : 0) + " %";
 }
 
-async function saveFlexSession() {
+async function finishFlex() {
+  $("flex-start").disabled = false;
+  $("flex-stop").disabled = true;
+  $("flex-target").disabled = false;
   const reps = app.flex.reps;
   const startedAt = app.flex.startedAt;
   app.flex.startedAt = null;
-  if (!reps.length) return toast("No repetitions recorded.");
-  if (!db || !app.patient) return toast("Not saved: choose a patient on the Home page first.", true);
+  if (!startedAt || !reps.length) return;
+  app.done.add("flex");
   const session = {
     patient_id: app.patient.id,
     exercise_type: "flex",
@@ -306,6 +334,7 @@ async function saveFlexSession() {
     avg_smoothness: +avg(reps.map((r) => r.smoothness)).toFixed(3),
     good_rep_ratio: +(reps.filter((r) => r.quality === "good").length / reps.length).toFixed(3),
   };
+  app.flex.saved.push(session);
   const { data, error } = await db.from("sessions").insert(session).select("id").single();
   if (error) return toast("Could not save the session: " + error.message, true);
   const rows = reps.map((r) => ({
@@ -315,13 +344,12 @@ async function saveFlexSession() {
   }));
   const result = await db.from("repetitions").insert(rows);
   if (result.error) return toast("Session saved, but repetitions failed: " + result.error.message, true);
-  toast(`Session saved: ${reps.length} repetitions.`);
+  toast(`Saved: ${reps.length} repetitions.`);
 }
 
-// ---------------------------------------------------------------- thumb touch exercise
+// ---------------------------------------------------------------- step 3: thumb touch
 $("thumb-start").addEventListener("click", async () => {
-  if (!app.patient) toast("No patient selected: this session will not be saved.", true);
-  app.thumb.total = +$("thumb-trials").value;
+  if (!needPatient()) return;
   try {
     await api("/api/thumb/start", { trials: app.thumb.total });
   } catch (error) {
@@ -329,7 +357,7 @@ $("thumb-start").addEventListener("click", async () => {
   }
   app.thumb.trials = [];
   app.thumb.startedAt = new Date().toISOString();
-  $("thumb-table").innerHTML = "";
+  $("thumb-trial").textContent = 0;
   updateThumbStats();
   $("thumb-start").disabled = true;
   $("thumb-stop").disabled = false;
@@ -350,7 +378,7 @@ async function onThumb(msg) {
   if (!app.thumb.startedAt) return;
   if (msg.stage === "wait") {
     setPrompt("Wait...");
-    $("thumb-trial").textContent = `Trial ${msg.trial} of ${msg.trials}`;
+    $("thumb-trial").textContent = msg.trial;
   } else if (msg.stage === "open_hand") {
     setPrompt("Open your hand", "early");
   } else if (msg.stage === "early") {
@@ -360,10 +388,6 @@ async function onThumb(msg) {
   } else if (msg.stage === "result") {
     app.thumb.trials.push(msg);
     setPrompt(msg.success ? `${msg.reaction_ms} ms` : "Missed", msg.success ? "" : "early");
-    const row = document.createElement("tr");
-    row.innerHTML = `<td>${msg.trial}</td><td><span class="tag ${msg.success ? "good" : "fail"}">${msg.success ? "Touched" : "Missed"}</span></td>` +
-      `<td>${msg.success ? msg.reaction_ms + " ms" : "-"}</td><td>${msg.success ? (msg.hold_ms / 1000).toFixed(1) + " s" : "-"}</td>`;
-    $("thumb-table").prepend(row);
     updateThumbStats();
   } else if (msg.stage === "done") {
     setPrompt("Well done!");
@@ -386,7 +410,7 @@ async function finishThumb() {
   app.thumb.startedAt = null;
   const trials = app.thumb.trials;
   if (!startedAt || !trials.length) return;
-  if (!db || !app.patient) return toast("Not saved: choose a patient on the Home page first.", true);
+  app.done.add("thumb");
   const ok = trials.filter((t) => t.success);
   const reaction = avg(ok.map((t) => t.reaction_ms));
   const session = {
@@ -398,43 +422,61 @@ async function finishThumb() {
     success_rate: +(ok.length / trials.length).toFixed(3),
     avg_reaction_ms: reaction === null ? null : Math.round(reaction),
   };
+  app.thumb.saved.push(session);
   const { data, error } = await db.from("sessions").insert(session).select("id").single();
   if (error) return toast("Could not save the session: " + error.message, true);
   const rows = trials.map((t) => ({ session_id: data.id, trial_index: t.trial, success: t.success, reaction_ms: t.reaction_ms, hold_ms: t.hold_ms }));
   const result = await db.from("touch_trials").insert(rows);
   if (result.error) return toast("Session saved, but trials failed: " + result.error.message, true);
-  toast(`Session saved: ${trials.length} trials.`);
+  toast(`Saved: ${trials.length} trials.`);
 }
 
-// ---------------------------------------------------------------- tutorials
-let tutorials = [];
+// ---------------------------------------------------------------- summary
+function renderSummary() {
+  const flex = app.flex.saved;
+  const thumb = app.thumb.saved;
+  const items = [];
+  if (flex.length) {
+    const reps = flex.reduce((n, s) => n + s.reps_count, 0);
+    const good = Math.round(avg(flex.map((s) => s.good_rep_ratio)) * 100);
+    const best = Math.max(...flex.map((s) => s.best_peak_percent));
+    items.push([reps, "finger bends"], [good + " %", "good repetitions"], [best + " %", "best bend"]);
+  }
+  if (thumb.length) {
+    const reaction = avg(thumb.map((s) => s.avg_reaction_ms));
+    const rate = Math.round(avg(thumb.map((s) => s.success_rate)) * 100);
+    items.push([reaction === null ? "-" : Math.round(reaction) + " ms", "thumb reaction"], [rate + " %", "touches made"]);
+  }
+  $("summary-box").innerHTML = items.length
+    ? items.map(([v, l]) => `<div class="item"><div class="value">${v}</div><div class="label">${l}</div></div>`).join("")
+    : '<p class="lead">No exercises were recorded in this session.</p>';
+}
+
+// ---------------------------------------------------------------- tutorials (inside each step)
 async function loadTutorials() {
   if (!db) return;
   const { data, error } = await db.from("tutorials").select("*").order("sort_order");
-  if (error) return ($("tutorial-list").innerHTML = `<p class="lead">Could not load tutorials: ${escapeHtml(error.message)}</p>`);
-  tutorials = data;
-  renderTutorials();
+  if (error) return;
+  document.querySelectorAll(".howto").forEach((box) => {
+    const list = data.filter((t) => t.exercise_type === box.dataset.type);
+    box.querySelector(".howto-body").innerHTML = list.map((t) => `
+      <div class="tutorial">
+        <div class="level">${escapeHtml(t.level)} &middot; ${t.duration_min} min</div>
+        <h3>${escapeHtml(t.title)}</h3>
+        <ol>${t.steps.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ol>
+        ${t.tips ? `<p class="tips">Tip: ${escapeHtml(t.tips)}</p>` : ""}
+        ${t.video_url && /^https:\/\//.test(t.video_url) ? `<a target="_blank" rel="noopener" href="${escapeHtml(t.video_url)}">Watch videos &rarr;</a>` : ""}
+      </div>`).join("");
+  });
 }
 
-function renderTutorials() {
-  const filter = $("tutorial-filter").value;
-  const list = tutorials.filter((t) => filter === "all" || t.exercise_type === filter);
-  $("tutorial-list").innerHTML = list.map((t) => `
-    <div class="card tutorial">
-      <div class="level">${escapeHtml(t.level)} &middot; ${t.duration_min} min</div>
-      <h3>${escapeHtml(t.title)}</h3>
-      <p>${escapeHtml(t.description)}</p>
-      <ol>${t.steps.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ol>
-      ${t.tips ? `<p class="tips">Tip: ${escapeHtml(t.tips)}</p>` : ""}
-      ${t.video_url && /^https:\/\//.test(t.video_url) ? `<a class="btn secondary" target="_blank" rel="noopener" href="${escapeHtml(t.video_url)}">Watch videos</a>` : ""}
-    </div>`).join("") || '<p class="lead">No tutorials.</p>';
-}
-$("tutorial-filter").addEventListener("change", renderTutorials);
-
-// ---------------------------------------------------------------- progress
-async function loadProgress() {
-  if (!db || !app.patient) return;
-  $("progress-lead").textContent = `Progress for ${app.patient.name}.`;
+// ---------------------------------------------------------------- history
+async function loadHistory() {
+  if (!db || !app.patient) {
+    $("progress-summary").textContent = "Choose a patient at the top to see their progress.";
+    $("session-table").innerHTML = "";
+    return;
+  }
   const { data, error } = await db.from("sessions").select("*").eq("patient_id", app.patient.id).order("started_at");
   if (error) return toast("Database error: " + error.message, true);
 
@@ -450,20 +492,26 @@ async function loadProgress() {
     { label: "Reaction (ms)", data: thumb.map((s) => s.avg_reaction_ms), borderColor: "#d97706" },
   ], "ms");
 
-  // Trend summary: compare the first and last 3 sessions.
+  // Trend summary: compare the earlier half of the sessions with the later half.
+  const halves = (list) => [list.slice(0, Math.floor(list.length / 2)), list.slice(Math.floor(list.length / 2))];
   const parts = [];
   if (flex.length >= 2) {
-    const first = avg(flex.slice(0, 3).map((s) => +s.avg_peak_percent));
-    const last = avg(flex.slice(-3).map((s) => +s.avg_peak_percent));
-    const change = last - first;
-    parts.push(`Finger bend: ${change >= 0 ? "+" : ""}${change.toFixed(0)} % compared with the first sessions (now ${last.toFixed(0)} % on average).`);
+    const [early, late] = halves(flex);
+    const first = avg(early.map((s) => +s.avg_peak_percent));
+    const last = avg(late.map((s) => +s.avg_peak_percent));
+    const change = Math.round(last - first);
+    parts.push(change === 0
+      ? `Finger bend steady at ${last.toFixed(0)} %.`
+      : `Finger bend ${change > 0 ? "up" : "down"} ${Math.abs(change)} % (from ${first.toFixed(0)} % to ${last.toFixed(0)} %).`);
   }
   if (thumb.length >= 2) {
-    const first = avg(thumb.slice(0, 3).map((s) => s.avg_reaction_ms));
-    const last = avg(thumb.slice(-3).map((s) => s.avg_reaction_ms));
-    if (first && last) parts.push(`Thumb reaction: ${Math.round(last)} ms now, ${last <= first ? "faster" : "slower"} than at the start (${Math.round(first)} ms).`);
+    const [early, late] = halves(thumb);
+    const first = avg(early.map((s) => s.avg_reaction_ms));
+    const last = avg(late.map((s) => s.avg_reaction_ms));
+    if (first && last) parts.push(`Thumb reaction ${Math.round(first)} ms → ${Math.round(last)} ms (${last <= first ? "faster" : "slower"}).`);
   }
-  $("progress-summary").textContent = parts.length ? parts.join(" ") : `${data.length} session(s) so far. Do at least two of each exercise to see a trend.`;
+  $("progress-summary").textContent = `${app.patient.name}: ` +
+    (parts.length ? parts.join(" ") : `${data.length} session(s) so far. Do at least two of each exercise to see a trend.`);
 
   $("session-table").innerHTML = data.slice().reverse().map((s) => {
     const result = s.exercise_type === "flex"
@@ -490,6 +538,7 @@ function drawChart(canvasId, labels, datasets, unit) {
 // ---------------------------------------------------------------- start
 setTarget(60);
 updateConnection();
+goToStep("calibrate");
 loadPorts();
 connectSocket();
 loadPatients();
